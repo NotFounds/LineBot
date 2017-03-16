@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -77,7 +78,7 @@ func getSearchUrl(q string) string {
 }
 
 func getImgSearchUrl(q string) string {
-	return getSearchUrl(q) + "&tbm=isch&tbs=ift:jpg"
+	return getSearchUrl(q) + "&tbm=isch"
 }
 
 func getMovSearchUrl(q string) string {
@@ -151,27 +152,31 @@ func handleTask(w http.ResponseWriter, r *http.Request) {
 		case *linebot.TextMessage:
 			text := strings.TrimSpace(msg.Text)
 			slice := strings.Split(text, " ")
-			idx := strings.Index(text, "とは?")
+			idx := math.Max(strings.Index(text, "とは?"), strings.Index(text, "とは?"))
 
 			if idx != -1 {
 				obj = linebot.NewTextMessage(getSearchUrl(text[:idx]))
 			} else if len(slice) >= 2 {
 				switch slice[0] {
 				case "img", "IMG", "I", "画像":
+					obj = linebot.NewTextMessage(getImgSearchUrl(strings.Join(slice[1:], " ")))
+				case "img1", "I1", "captcha", "cap", "c", "C":
 					url := getOneImgUrl(strings.Join(slice[1:], " "), c)
 					if url != "" {
 						obj = linebot.NewTextMessage(url)
 					} else {
 						obj = linebot.NewTextMessage(getImgSearchUrl(strings.Join(slice[1:], " ")))
 					}
-				case "mov", "MOV", "M", "動画":
+				case "mov", "MOV", "m", "M", "動画":
 					obj = linebot.NewTextMessage(getMovSearchUrl(strings.Join(slice[1:], " ")))
-				case "search", "S", "ggr", "検索", "ググる":
+				case "search", "s", "S", "ggr", "検索", "ググる":
 					obj = linebot.NewTextMessage(getSearchUrl(strings.Join(slice[1:], " ")))
-				case "news", "News", "ニュース":
+				case "news", "News", "n", "N", "ニュース":
 					obj = linebot.NewTextMessage(getNewsSearchUrl(strings.Join(slice[1:], " ")))
-				case "wikipedia", "wiki", "Wikipedia", "Wiki", "W", "ウィキペディア", "ウィキ":
+				case "wikipedia", "wiki", "Wikipedia", "Wiki", "w", "W", "ウィキペディア", "ウィキ":
 					obj = linebot.NewTextMessage(getWikiUrl(slice[1]))
+				case "map", "地図":
+					obj = linebot.NewTextMessage(getMapSearchUrl(strings.Join(slice[1:], "+")))
 				}
 			}
 		}
